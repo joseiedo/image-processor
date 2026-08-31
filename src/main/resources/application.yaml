@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: image-processor-1
+  datasource:
+    url: jdbc:postgresql://localhost:5432/image-processor
+    username: admin
+    password: admin
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+minio:
+  endpoint: http://localhost:9000
+  access-key: admin
+  secret-key: password
+
+management:
+  endpoint:
+    health:
+      show-details: always
