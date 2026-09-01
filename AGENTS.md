@@ -26,6 +26,7 @@
 - Caching: processed results are cached in Redis keyed by content (`sha256(image):operation:sha256(params)` via `ImageProcessCommand.cacheKey()`). The controller checks the `ProcessedImageCache` port (Redis adapter in `infra/cache/`, 1h TTL) **before publishing**: on a hit it returns `303` to `GET /api/v1/images/by-cache/{cacheKey}` and skips the RabbitMQ message entirely; on a miss it publishes and the consumer's `ImageProcessingServiceImpl` also checks the cache as a safety net.
 - Messaging: the domain owns the port interfaces (`imageprocessor/application/ImageProcessPublisher`, `ImageProcessingService`); the RabbitMQ adapters + config live in `infra/messaging/` (`RabbitMQImageProcessPublisher`, `RabbitMQImageProcessConsumer`, `RabbitMQConfig`). Controllers never touch RabbitTemplate/AMQP types.
 - Security: **auth currently disabled** (`anyRequest().permitAll()` in `SecurityConfig`); originally all endpoints required auth except `/actuator/health/**`, HTTP Basic, default `user`/random-password. Re-enable when auth lands.
+- Rate limiting: fixed-window per-IP limiter (`RateLimitFilter` in `infra/ratelimit/`, Redis `ratelimit:*` counters, TTL = window). Applied to `/api/v1/images/*`; config in `app.ratelimit.*` (`enabled`, `max-requests-per-window`, `window-seconds`); fails open if Redis errors. `make clean-redis` flushes both `image:*` and `ratelimit:*`.
 
 ## Config
 - App config in `src/main/resources/application.yaml` (datasource, redis, minio props via `@ConfigurationProperties(prefix = "minio")`).

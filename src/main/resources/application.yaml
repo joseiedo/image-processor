@@ -18,6 +18,12 @@ minio:
   secret-key: password
   bucket: image-processor
 
+app:
+  ratelimit:
+    enabled: true
+    max-requests-per-window: 60
+    window-seconds: 60
+
 management:
   endpoint:
     health:

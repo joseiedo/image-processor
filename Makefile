@@ -1,4 +1,4 @@
-.PHONY: help build test run smoke package up down clean clean-redis
+.PHONY: help build test run smoke ratelimit package up down clean clean-redis
 
 help:            ## List all targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -15,6 +15,9 @@ run:             ## Run the app (auto-starts docker-compose)
 smoke:           ## End-to-end smoke test (app must be running)
 	node scripts/e2e-smoke.js
 
+ratelimit:       ## Burst test: verify the rate limiter blocks with 429
+	node scripts/rate-limit-check.js
+
 package:         ## Build jar
 	./mvnw package
 
@@ -27,6 +30,8 @@ down:            ## Stop Minio/Redis/Postgres
 clean:           ## Clean build artifacts
 	./mvnw clean
 
-clean-redis:     ## Flush the image:* cache keys in Redis
+clean-redis:     ## Flush app keys (image:* cache + ratelimit:*) in Redis
 	@container=$$(docker ps --filter ancestor=redis --format '{{.Names}}' | head -1); \
-	docker exec "$$container" redis-cli --scan --pattern 'image:*' | xargs -r docker exec "$$container" redis-cli DEL
+	for pattern in 'image:*' 'ratelimit:*'; do \
+	  docker exec "$$container" redis-cli --scan --pattern "$$pattern" | xargs -r docker exec "$$container" redis-cli DEL; \
+	done
