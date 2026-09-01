@@ -39,29 +39,41 @@ async function submitAndFetch(name, operation, params) {
   }
   form.append('file', new Blob([fs.readFileSync(IMAGE_PATH)], { type: 'image/jpeg' }), path.basename(IMAGE_PATH));
 
-  const submit = await fetch(`${BASE_URL}/api/v1/images/process`, { method: 'POST', body: form });
-  if (submit.status !== 202) {
-    throw new Error(`${name}: process endpoint returned ${submit.status} (is the app running?)`);
-  }
-
+  const submit = await fetch(`${BASE_URL}/api/v1/images/process`, { method: 'POST', body: form, redirect: 'manual' });
   const location = submit.headers.get('location');
-  const id = location ? location.split('/').pop() : null;
-  if (!id) {
+  if (!location) {
     throw new Error(`${name}: process response missing Location header`);
   }
 
-  for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
-    const response = await fetch(`${BASE_URL}/api/v1/images/${id}`);
-    if (response.ok) {
-      const bytes = Buffer.from(await response.arrayBuffer());
-      if (!isPng(bytes)) {
-        throw new Error(`${name}: response is not a PNG`);
+  if (submit.status === 202) {
+    const id = location.split('/').pop();
+    for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
+      const response = await fetch(`${BASE_URL}/api/v1/images/${id}`);
+      if (response.ok) {
+        const bytes = Buffer.from(await response.arrayBuffer());
+        if (!isPng(bytes)) {
+          throw new Error(`${name}: response is not a PNG`);
+        }
+        return { bytes, cached: false };
       }
-      return bytes;
+      await sleep(POLL_INTERVAL_MS);
     }
-    await sleep(POLL_INTERVAL_MS);
+    throw new Error(`${name}: timed out waiting for processed image ${id}`);
   }
-  throw new Error(`${name}: timed out waiting for processed image ${id}`);
+
+  if (submit.status === 303) {
+    const response = await fetch(`${BASE_URL}${location}`);
+    if (!response.ok) {
+      throw new Error(`${name}: cached result at ${location} returned ${response.status}`);
+    }
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!isPng(bytes)) {
+      throw new Error(`${name}: cached response is not a PNG`);
+    }
+    return { bytes, cached: true };
+  }
+
+  throw new Error(`${name}: process endpoint returned ${submit.status} (is the app running?)`);
 }
 
 function isPng(bytes) {
@@ -109,12 +121,13 @@ function buildHtml(results) {
 async function runPass(label) {
   const hashes = {};
   for (const { name, operation, params } of OPERATIONS) {
-    const bytes = await submitAndFetch(name, operation, params);
+    const { bytes, cached } = await submitAndFetch(name, operation, params);
     hashes[name] = sha256(bytes);
     if (label === 'first') {
       fs.writeFileSync(path.join(REPORT_DIR, `${name}.png`), bytes);
     }
-    console.log(`OK: ${name} (${label}) -> ${bytes.length} bytes, sha256=${hashes[name].slice(0, 12)}…`);
+    const how = cached ? 'cached (redirect)' : 'processed (queued)';
+    console.log(`OK: ${name} (${label}) -> ${how}, ${bytes.length} bytes, sha256=${hashes[name].slice(0, 12)}…`);
   }
   return hashes;
 }
