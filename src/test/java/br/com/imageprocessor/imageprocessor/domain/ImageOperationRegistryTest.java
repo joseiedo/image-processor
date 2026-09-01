@@ -1,8 +1,9 @@
-package br.com.imageprocessor.imageprocessor;
+package br.com.imageprocessor.imageprocessor.domain;
 
-import br.com.imageprocessor.imageprocessor.operations.ImageOperation;
-import br.com.imageprocessor.imageprocessor.operations.ImageOperations;
-import br.com.imageprocessor.imageprocessor.operations.ResizeParams;
+import br.com.imageprocessor.imageprocessor.domain.operations.ImageOperation;
+import br.com.imageprocessor.imageprocessor.domain.ImageOperationRegistry;
+import br.com.imageprocessor.imageprocessor.domain.operations.ImageOperations;
+import br.com.imageprocessor.imageprocessor.domain.operations.ResizeParams;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

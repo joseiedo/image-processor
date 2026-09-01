@@ -1,8 +1,10 @@
-package br.com.imageprocessor.imageprocessor.operations;
+package br.com.imageprocessor.imageprocessor.domain.operations;
 
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Component;
 
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 
 @Component
 public class ImageResizeOperation implements ImageOperation<ResizeParams> {
@@ -19,6 +21,12 @@ public class ImageResizeOperation implements ImageOperation<ResizeParams> {
 
     @Override
     public BufferedImage apply(BufferedImage image, ResizeParams params) {
-        return image;
+        try {
+            return Thumbnails.of(image)
+                    .size(params.width(), params.height())
+                    .asBufferedImage();
+        } catch (IOException e) {
+            throw new ImageProcessingException(e);
+        }
     }
 }

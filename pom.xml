@@ -29,6 +29,7 @@
     <properties>
         <java.version>17</java.version>
         <minio.version>8.5.17</minio.version>
+        <thumbnailator.version>0.4.20</thumbnailator.version>
     </properties>
     <dependencies>
         <dependency>
@@ -64,6 +65,11 @@
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
             <version>${minio.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>${thumbnailator.version}</version>
         </dependency>
 
         <dependency>

@@ -1,7 +1,7 @@
-package br.com.imageprocessor.imageprocessor;
+package br.com.imageprocessor.imageprocessor.domain;
 
-import br.com.imageprocessor.imageprocessor.operations.ImageOperation;
-import br.com.imageprocessor.imageprocessor.operations.ImageOperations;
+import br.com.imageprocessor.imageprocessor.domain.operations.ImageOperation;
+import br.com.imageprocessor.imageprocessor.domain.operations.ImageOperations;
 import org.springframework.stereotype.Component;
 
 import java.awt.image.BufferedImage;

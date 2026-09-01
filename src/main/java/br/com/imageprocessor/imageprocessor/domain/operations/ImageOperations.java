@@ -1,4 +1,4 @@
-package br.com.imageprocessor.imageprocessor.operations;
+package br.com.imageprocessor.imageprocessor.domain.operations;
 
 public enum ImageOperations {
     GRAYSCALE,
