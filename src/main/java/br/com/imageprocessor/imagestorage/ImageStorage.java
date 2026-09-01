@@ -7,5 +7,7 @@ public interface ImageStorage {
 
     void save(String key, BufferedImage image);
 
+    void save(String key, byte[] content);
+
     Optional<byte[]> load(String key);
 }

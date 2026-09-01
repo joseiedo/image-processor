@@ -5,12 +5,15 @@
  *   (auth is currently disabled in SecurityConfig)
  *
  * Flow: for each operation, upload monke.jpg -> 202 + Location -> poll -> GET processed
- * image -> verify PNG. Writes the input + every result to target/e2e-report/ and
- * generates index.html so you can eyeball the outputs.
+ * image -> verify PNG. Runs every operation TWICE: the second pass has the same
+ * content, so it must be served from the Redis cache (identical bytes, no new keys).
+ * Writes the input + every result to target/e2e-report/ and generates index.html.
  */
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { execSync } = require('child_process');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
 const IMAGE_PATH = process.env.SMOKE_IMAGE || path.join(__dirname, '..', 'src', 'test', 'resources', 'monke.jpg');
@@ -66,6 +69,25 @@ function isPng(bytes) {
     && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
 }
 
+function sha256(bytes) {
+  return crypto.createHash('sha256').update(bytes).digest('hex');
+}
+
+function countCacheKeys() {
+  try {
+    const container = execSync('docker ps --filter ancestor=redis --format "{{.Names}}"', { encoding: 'utf8' })
+      .trim()
+      .split('\n')[0];
+    if (!container) {
+      return null;
+    }
+    const out = execSync(`docker exec ${container} redis-cli --scan --pattern 'image:*'`, { encoding: 'utf8' });
+    return out.trim() ? out.trim().split('\n').length : 0;
+  } catch {
+    return null;
+  }
+}
+
 function buildHtml(results) {
   const body = Object.entries(results)
     .map(([name, file]) => `<h2>${name}</h2><img src="${file}">`)
@@ -84,6 +106,19 @@ function buildHtml(results) {
 </html>`;
 }
 
+async function runPass(label) {
+  const hashes = {};
+  for (const { name, operation, params } of OPERATIONS) {
+    const bytes = await submitAndFetch(name, operation, params);
+    hashes[name] = sha256(bytes);
+    if (label === 'first') {
+      fs.writeFileSync(path.join(REPORT_DIR, `${name}.png`), bytes);
+    }
+    console.log(`OK: ${name} (${label}) -> ${bytes.length} bytes, sha256=${hashes[name].slice(0, 12)}…`);
+  }
+  return hashes;
+}
+
 async function main() {
   if (!fs.existsSync(IMAGE_PATH)) {
     throw new Error(`test image not found: ${IMAGE_PATH}`);
@@ -91,15 +126,33 @@ async function main() {
   fs.mkdirSync(REPORT_DIR, { recursive: true });
   fs.copyFileSync(IMAGE_PATH, path.join(REPORT_DIR, 'input.png'));
 
-  const results = { input: 'input.png' };
-  for (const { name, operation, params } of OPERATIONS) {
-    const bytes = await submitAndFetch(name, operation, params);
-    const file = `${name}.png`;
-    fs.writeFileSync(path.join(REPORT_DIR, file), bytes);
-    results[name] = file;
-    console.log(`OK: ${name} -> ${file} (${bytes.length} bytes)`);
+  console.log('--- first pass (cold cache) ---');
+  const first = await runPass('first');
+
+  const keysAfterFirst = countCacheKeys();
+  console.log(`cache keys (image:*): ${keysAfterFirst === null ? 'n/a' : keysAfterFirst}`);
+
+  console.log('--- second pass (same content -> cache) ---');
+  const second = await runPass('second');
+
+  for (const { name } of OPERATIONS) {
+    if (second[name] !== first[name]) {
+      throw new Error(`${name}: second pass differs from first (cache not reused)`);
+    }
   }
 
+  const keysAfterSecond = countCacheKeys();
+  if (keysAfterFirst !== null && keysAfterSecond !== null) {
+    const delta = keysAfterSecond - keysAfterFirst;
+    console.log(`cache keys (image:*): ${keysAfterSecond} after second pass (${delta} new -> all served from cache)`);
+  } else {
+    console.log('cache keys (image:*): n/a (redis-cli/docker unavailable)');
+  }
+
+  const results = { input: 'input.png' };
+  for (const { name } of OPERATIONS) {
+    results[name] = `${name}.png`;
+  }
   fs.writeFileSync(path.join(REPORT_DIR, 'index.html'), buildHtml(results));
   console.log(`report: ${path.join(REPORT_DIR, 'index.html')}`);
 }

@@ -11,9 +11,27 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.UUID;
 
 public record ImageProcessCommand(UUID id, ImageOperations operation, String paramsJson, byte[] image, String filename) {
+
+    public String cacheKey() {
+        String imageHash = sha256(image);
+        String paramsHash = paramsJson == null ? "none" : sha256(paramsJson.getBytes(StandardCharsets.UTF_8));
+        return "image:" + imageHash + ":" + operation + ":" + paramsHash;
+    }
+
+    private static String sha256(byte[] data) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     public BufferedImage decode() {
         try {

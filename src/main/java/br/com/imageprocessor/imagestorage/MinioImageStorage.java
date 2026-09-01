@@ -44,13 +44,17 @@ public class MinioImageStorage implements ImageStorage {
 
     @Override
     public void save(String key, BufferedImage image) {
+        save(key, encode(image));
+    }
+
+    @Override
+    public void save(String key, byte[] content) {
         ensureBucketExists();
-        byte[] bytes = encode(image);
         try {
             minioClient.putObject(PutObjectArgs.builder()
                     .bucket(properties.bucket())
                     .object(key)
-                    .stream(new ByteArrayInputStream(bytes), bytes.length, -1)
+                    .stream(new ByteArrayInputStream(content), content.length, -1)
                     .contentType("image/png")
                     .build());
         } catch (Exception e) {

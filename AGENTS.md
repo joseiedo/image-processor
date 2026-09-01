@@ -9,7 +9,7 @@
 - `make build` / `make test` / `make run` / `make smoke` / `make package` / `make up` / `make down` (see `Makefile`).
 - Direct: `./mvnw <goal>`. Run a single test: `./mvnw -Dtest=MinioHealthIndicatorTest test`.
 - `make run` / `./mvnw spring-boot:run` auto-starts docker-compose services via the `spring-boot-docker-compose` starter — Docker must be running.
-- `make smoke` runs `scripts/e2e-smoke.js`: end-to-end smoke against the running app. It uploads `monke.jpg` for each operation (grayscale/resize/rotate/crop/blur) via `POST /api/v1/images/process`, polls, GETs each result, verifies PNG, and writes input + results + `index.html` to `target/e2e-report/`. App + stack must be up.
+- `make smoke` runs `scripts/e2e-smoke.js`: end-to-end smoke against the running app. It uploads `monke.jpg` for each operation (grayscale/resize/rotate/crop/blur) via `POST /api/v1/images/process`, polls, GETs each result, and verifies PNG. It runs every operation **twice** to prove Redis caching: the second pass must return byte-identical images and add zero new `image:*` keys (counted via `docker exec <redis-container> redis-cli`). Writes input + results + `index.html` to `target/e2e-report/`. App + stack must be up.
 
 ## Gotchas
 - **Spring Boot 4 package renames**: actuator health classes live under `org.springframework.boot.health.contributor` (`Health`, `HealthIndicator`, `Status`), NOT the Spring Boot 3 `org.springframework.boot.actuate.health` package. Don't import the old package.
@@ -23,6 +23,7 @@
 - Within a domain: `controller/` = inbound REST adapter; `domain/` = core logic (`ImageOperationRegistry` + `domain/operations/*`); `application/` = use cases + ports (`ImageProcessingService`, `ImageProcessPublisher`, `ImageProcessCommand`).
 - Dependency direction: `imageprocessor` -> `imagestorage` (never reverse). `imagestorage` is an adapter (Minio), not a service — it defines the `ImageStorage` port (interface) and implements it via `MinioImageStorage`; the `imageprocessor` service consumes the interface only.
 - Minio: bucket name comes from `minio.bucket` in `application.yaml`; `MinioImageStorage` creates the bucket eagerly at startup (`@PostConstruct`, tolerant WARN) and lazily on `save` as fallback; encodes results as PNG. Note: Minio has no volume in docker-compose, so buckets vanish on `docker compose down`.
+- Caching: processed results are cached in Redis keyed by content (`sha256(image):operation:sha256(params)` via `ImageProcessCommand.cacheKey()`). `ImageProcessingServiceImpl` checks the `ProcessedImageCache` port (Redis adapter in `infra/cache/`, 1h TTL) before processing and skips the operation on a hit.
 - Messaging: the domain owns the port interfaces (`imageprocessor/application/ImageProcessPublisher`, `ImageProcessingService`); the RabbitMQ adapters + config live in `infra/messaging/` (`RabbitMQImageProcessPublisher`, `RabbitMQImageProcessConsumer`, `RabbitMQConfig`). Controllers never touch RabbitTemplate/AMQP types.
 - Security: **auth currently disabled** (`anyRequest().permitAll()` in `SecurityConfig`); originally all endpoints required auth except `/actuator/health/**`, HTTP Basic, default `user`/random-password. Re-enable when auth lands.
 

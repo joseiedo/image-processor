@@ -54,6 +54,17 @@ class MinioImageStorageTest {
     }
 
     @Test
+    void savesRawBytes() throws Exception {
+        when(minioClient.bucketExists(any(BucketExistsArgs.class))).thenReturn(true);
+
+        storage.save("processed/1.png", new byte[]{1, 2, 3});
+
+        ArgumentCaptor<PutObjectArgs> captor = ArgumentCaptor.forClass(PutObjectArgs.class);
+        verify(minioClient).putObject(captor.capture());
+        assertEquals("processed/1.png", captor.getValue().object());
+    }
+
+    @Test
     void usesConfiguredBucketAndKey() throws Exception {
         when(minioClient.bucketExists(any(BucketExistsArgs.class))).thenReturn(true);
 
