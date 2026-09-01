@@ -1,4 +1,4 @@
-.PHONY: help build test run package up down clean
+.PHONY: help build test run smoke package up down clean
 
 help:            ## List all targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -11,6 +11,9 @@ test:            ## Run tests
 
 run:             ## Run the app (auto-starts docker-compose)
 	./mvnw spring-boot:run
+
+smoke:           ## End-to-end smoke test (app must be running)
+	node scripts/e2e-smoke.js
 
 package:         ## Build jar
 	./mvnw package

@@ -1,11 +1,15 @@
 package br.com.imageprocessor.imageprocessor.controller;
 
+import br.com.imageprocessor.imageprocessor.application.ImageKeys;
 import br.com.imageprocessor.imageprocessor.application.ImageProcessCommand;
 import br.com.imageprocessor.imageprocessor.application.ImageProcessPublisher;
 import br.com.imageprocessor.imageprocessor.domain.operations.ImageOperations;
 import br.com.imageprocessor.imageprocessor.domain.operations.ImageProcessingException;
+import br.com.imageprocessor.imagestorage.ImageStorage;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,9 +26,11 @@ import java.util.UUID;
 public class ImageProcessingController {
 
     private final ImageProcessPublisher publisher;
+    private final ImageStorage imageStorage;
 
-    public ImageProcessingController(ImageProcessPublisher publisher) {
+    public ImageProcessingController(ImageProcessPublisher publisher, ImageStorage imageStorage) {
         this.publisher = publisher;
+        this.imageStorage = imageStorage;
     }
 
     @PostMapping(value = "/process", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -42,6 +48,15 @@ public class ImageProcessingController {
         return ResponseEntity.accepted()
                 .location(URI.create("/api/v1/images/" + command.id()))
                 .build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<byte[]> getProcessedImage(@PathVariable UUID id) {
+        return imageStorage.load(ImageKeys.processed(id))
+                .map(bytes -> ResponseEntity.ok()
+                        .contentType(MediaType.IMAGE_PNG)
+                        .body(bytes))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     private static byte[] readBytes(MultipartFile file) {

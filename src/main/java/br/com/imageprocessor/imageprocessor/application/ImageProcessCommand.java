@@ -4,8 +4,8 @@ import br.com.imageprocessor.imageprocessor.domain.ImageOperationRegistry;
 import br.com.imageprocessor.imageprocessor.domain.operations.ImageOperations;
 import br.com.imageprocessor.imageprocessor.domain.operations.ImageProcessingException;
 import br.com.imageprocessor.imageprocessor.domain.operations.NoParams;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -34,7 +34,7 @@ public record ImageProcessCommand(UUID id, ImageOperations operation, String par
         }
         try {
             return objectMapper.readValue(paramsJson, paramsType);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new ImageProcessingException(e);
         }
     }

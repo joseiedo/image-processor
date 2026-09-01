@@ -23,7 +23,7 @@ public class ImageResizeOperation implements ImageOperation<ResizeParams> {
     public BufferedImage apply(BufferedImage image, ResizeParams params) {
         try {
             return Thumbnails.of(image)
-                    .size(params.width(), params.height())
+                    .forceSize(params.width(), params.height())
                     .asBufferedImage();
         } catch (IOException e) {
             throw new ImageProcessingException(e);
