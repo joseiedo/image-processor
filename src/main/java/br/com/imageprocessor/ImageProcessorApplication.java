@@ -1,13 +1,13 @@
-package br.com.imageprocessor1;
+package br.com.imageprocessor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ImageProcessor1Application {
+public class ImageProcessorApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ImageProcessor1Application.class, args);
+        SpringApplication.run(ImageProcessorApplication.class, args);
     }
 
 }

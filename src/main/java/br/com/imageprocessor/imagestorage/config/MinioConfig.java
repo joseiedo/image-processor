@@ -1,4 +1,4 @@
-package br.com.imageprocessor1.config;
+package br.com.imageprocessor.imagestorage.config;
 
 import io.minio.MinioClient;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

@@ -1,10 +1,10 @@
-package br.com.imageprocessor1;
+package br.com.imageprocessor;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class ImageProcessor1ApplicationTests {
+class ImageProcessorApplicationTests {
 
     @Test
     void contextLoads() {

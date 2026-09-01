@@ -1,4 +1,4 @@
-package br.com.imageprocessor1.config;
+package br.com.imageprocessor.infra.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

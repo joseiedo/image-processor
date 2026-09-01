@@ -1,4 +1,4 @@
-package br.com.imageprocessor1.health;
+package br.com.imageprocessor.imagestorage.health;
 
 import io.minio.MinioClient;
 import org.junit.jupiter.api.Test;
